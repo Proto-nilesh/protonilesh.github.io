@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive MBTI Quiz</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        h1, h2 {
+            text-align: center;
+            color: #333;
+        }
+        #quiz {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .question {
+            margin: 20px 0;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+        .question.show {
+            opacity: 1;
+        }
+        .answer {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            background: #e8e8e8;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .answer:hover {
+            background: #ddd;
+        }
+        #results {
+            display: none;
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .bar {
+            width: 100%;
+            height: 25px;
+            background: #eee;
+            margin: 10px 0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 5px;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            background: linear-gradient(to right, #4CAF50, #00bcd4);
+            transition: width 1s ease-in-out;
+        }
+        .label {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            top: -20px;
+            font-weight: bold;
+        }
+        .left, .right {
+            position: absolute;
+            top: 30px;
+            font-size: 0.8em;
+        }
+        .left { left: 0; }
+        .right { right: 0; }
+        .fade-in {
+            animation: fadeIn 1s;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/p5@1.4.0/lib/p5.js"></script>
+</head>
+<body>
+    <h1>Interactive MBTI Quiz</h1>
+    <div id="quiz">
+        <h2>About You</h2>
+        <input type="text" id="goals" placeholder="What are your main goals?" required>
+        <input type="number" id="age" placeholder="Your age" required>
+        <input type="text" id="city" placeholder="Your city" required>
+
+        <h2>MBTI Questions:</h2>
+        <div id="questions">
+            <div class="question" data-q="1">
+                <p>Do you prefer to spend time with others or by yourself?</p>
+                <span class="answer" data-a="E">With others</span>
+                <span class="answer" data-a="I">By myself</span>
+            </div>
+            <div class="question" data-q="2">
+                <p>When making a decision, do you focus on logical reasoning or personal values?</p>
+                <span class="answer" data-a="T">Logical reasoning</span>
+                <span class="answer" data-a="F">Personal values</span>
+            </div>
+            <div class="question" data-q="3">
+                <p>Do you enjoy a structured and planned routine or prefer to go with the flow?</p>
+                <span class="answer" data-a="J">Structured and planned</span>
+                <span class="answer" data-a="P">Go with the flow</span>
+            </div>
+            <div class="question" data-q="4">
+                <p>Are you more interested in practical reality or possibilities and ideas?</p>
+                <span class="answer" data-a="S">Practical reality</span>
+                <span class="answer" data-a="N">Possibilities and ideas</span>
+            </div>
+            <div class="question" data-q="5">
+                <p>In social situations, are you more talkative or reserved?</p>
+                <span class="answer" data-a="E">Talkative</span>
+                <span class="answer" data-a="I">Reserved</span>
+            </div>
+            <div class="question" data-q="6">
+                <p>Do you prefer to stick to plans or change them as new situations arise?</p>
+                <span class="answer" data-a="J">Stick to plans</span>
+                <span class="answer" data-a="P">Change them</span>
+            </div>
+            <div class="question" data-q="7">
+                <p>In your work, do you enjoy dealing with facts and details or concepts and theories?</p>
+                <span class="answer" data-a="S">Facts and details</span>
+                <span class="answer" data-a="N">Concepts and theories</span>
+            </div>
+            <div class="question" data-q="8">
+                <p>When solving problems, do you use your head or your heart?</p>
+                <span class="answer" data-a="T">Head</span>
+                <span class="answer" data-a="F">Heart</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="results">
+        <h2>Your MBTI Type:</h2>
+        <p id="mbtiType"></p>
+        <div id="visualization"></div>
+    </div>
+
+    <script>
+        let currentQuestion = 1;
+        let answers = {};
+
+        function showQuestion(number) {
+            const questions = document.querySelectorAll('.question');
+            questions.forEach(q => {
+                q.classList.remove('show');
+                if (q.getAttribute('data-q') == number) {
+                    q.classList.add('show');
+                }
+            });
+        }
+
+        document.querySelectorAll('.answer').forEach(answer => {
+            answer.addEventListener('click', function() {
+                let question = this.parentElement.getAttribute('data-q');
+                answers[question] = this.getAttribute('data-a');
+                currentQuestion++;
+                if (currentQuestion <= 8) {
+                    showQuestion(currentQuestion);
+                } else {
+                    calculateAndShowResults();
+                }
+            });
+        });
+
+        function calculateMBTI() {
+            let mbti = {
+                'I': 0, 'E': 0, 'S': 0, 'N': 0, 'T': 0, 'F': 0, 'J': 0, 'P': 0
+            };
+
+            Object.values(answers).forEach(answer => {
+                mbti[answer]++;
+            });
+
+            let type = '';
+            ['I', 'E'].forEach(t => type += mbti[t] > 1 ? t : '');
+            ['S', 'N'].forEach(t => type += mbti[t] > 1 ? t : '');
+            ['T', 'F'].forEach(t => type += mbti[t] > 1 ? t : '');
+            ['J', 'P'].forEach(t => type += mbti[t] > 1 ? t : '');
+
+            return {
+                type: type,
+                scores: {
+                    E: mbti.E * 25,
+                    I: mbti.I * 25,
+                    S: mbti.S * 25,
+                    N: mbti.N * 25,
+                    T: mbti.T * 25,
+                    F: mbti.F * 25,
+                    J: mbti.J * 25,
+                    P: mbti.P * 25
+                }
+            };
+        }
+
+        function calculateAndShowResults() {
+            let result = calculateMBTI();
+            document.getElementById('mbtiType').innerText = result.type;
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('results').classList.add('fade-in');
+
+            let sketch = function(p) {
+                p.setup = function() {
+                    p.createCanvas(400, 300);
+                    p.noLoop();
+                };
+
+                p.draw = function() {
+                    p.background(240);
+                    let y = 20;
+                    let dimensions = ['E-I', 'S-N', 'T-F', 'J-P'];
+                    let pairs = [['E', 'I'], ['S', 'N'], ['T', 'F'], ['J', 'P']];
+                    
+                    pairs.forEach((pair, index) => {
+                        let scoreA = result.scores[pair[0]];
+                        let scoreB = result.scores[pair[1]];
+                        let total = scoreA + scoreB;
+                        let percentage = total === 0 ? 50 : (scoreA / total) * 100;
+                        
+                        p.fill(220);
+                        p.rect(50, y, 300, 25);
+                        let fillBar = p.createDiv().addClass('bar-fill').style('width', `${percentage}%`);
+                        p.select(`#visualization`).child(fillBar);
+                        
+                        p.fill(0);
+                        p.text(dimensions[index], 200, y + 17);
+                        
+                        p.text(pair[0], 30, y + 17);
+                        p.text(pair[1], 370, y + 17);
+                        
+                        y += 50;
+                    });
+                };
+            };
+
+            new p5(sketch, 'visualization');
+        }
+
+        showQuestion(currentQuestion);
+    </script>
+</body>
+</html>
